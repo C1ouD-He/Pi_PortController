@@ -55,18 +55,21 @@ class port_controller(object):
             self.port_terminal()
 
     def help(self):
-        print('|---------------------------------------------------------|')
-        print('|----------------------#help -v2.0.0----------------------|')
-        print('|                                                         |')
-        print('| input 0 ~ 9 to choose ttyUSB0~9                         |')
-        print('| input quit to quit the program                          |')
-        print('|                                                         |')
-        print('| when using serial:                                      |')
-        print('| input q will return to choosing port                    |')
-        print('| input echo on/off to enable/disable the echo            |')
-        print('|                                                         |')
-        print('|                                                         |')
-        print('|---------------------------------------------------------|')
+        self.print_help('|---------------------------------------------------------|')
+        self.print_help('|----------------------#help -v2.0.3----------------------|')
+        self.print_help('|                                                         |')
+        self.print_help('| input 0 ~ 9 to choose ttyUSB0~9                         |')
+        self.print_help('| input quit to quit the program                          |')
+        self.print_help('|                                                         |')
+        self.print_help('| when using serial:                                      |')
+        self.print_help('| input q will return to choosing port                    |')
+        self.print_help('| input echo on/off to enable/disable the echo            |')
+        self.print_help('|                                                         |')
+        self.print_help('|                                                         |')
+        self.print_help('|---------------------------------------------------------|')
+
+    def print_help(self, txt):
+        print('\033[;;100m' + txt + '\033[0m')
 
 
 if __name__ == '__main__':
