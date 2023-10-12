@@ -1,9 +1,8 @@
 # rebuild the code struct
 import asyncio
 import serial_terminal
-#readline.parse_and_bind("tab: complete")
-#readline.parse_and_bind("set editing-mode vi")
-
+# readline.parse_and_bind("tab: complete")
+# readline.parse_and_bind("set editing-mode vi")
 
 
 # 文件追加写入
@@ -42,10 +41,10 @@ class port_controller(object):
                 except ValueError:
                     print('WARNING: Input out of list!') 
                 for i in range(10):
-                    if(InputB == i):
-                        self.conn = serial_terminal.serial_terminal(i)
-                        asyncio.run(self.conn.serial_terminal())
-                        del self.conn
+                    if InputB == i:
+                        conn = serial_terminal.serial_terminal(i)
+                        asyncio.run(conn.serial_terminal())
+                        del conn
                         ch = 0
                         break
                 
@@ -57,7 +56,7 @@ class port_controller(object):
 
     def help(self):
         print('|---------------------------------------------------------|')
-        print('|--------------------------#help--------------------------|')
+        print('|----------------------#help -v2.0.0----------------------|')
         print('|                                                         |')
         print('| input 0 ~ 9 to choose ttyUSB0~9                         |')
         print('| input quit to quit the program                          |')
