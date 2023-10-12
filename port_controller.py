@@ -72,8 +72,8 @@ class port_controller(object):
 if __name__ == '__main__':
     try:
         port_controller = port_controller()
-        #filename = ['/home/pi/.remote_env/log/MCU_' + time.strftime('%Y-%m-%d-%H_%M_%S', time.localtime()) + '.log',
-        #            '/home/pi/.remote_env/log/SOC_' + time.strftime('%Y-%m-%d-%H_%M_%S', time.localtime()) + '.log']
+        # filename = ['/home/pi/.remote_env/log/MCU_' + time.strftime('%Y-%m-%d-%H_%M_%S', time.localtime()) + '.log',
+        #             '/home/pi/.remote_env/log/SOC_' + time.strftime('%Y-%m-%d-%H_%M_%S', time.localtime()) + '.log']
         port_controller.port_controller()
     except KeyboardInterrupt:
         # readline.clear_history()
