@@ -83,7 +83,7 @@ class serial_terminal(object):
                         self.soc_commond = False
                         self.mcu_project = self.log_tmp
                     else:
-                        print(self.log_tmp)
+                        #print(self.log_tmp)
                         Gw_Server.broadcast(self.log_tmp, self.subscribe_client)
             except:
                 pass
