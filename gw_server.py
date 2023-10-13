@@ -206,15 +206,19 @@ class Gw_Server(object):
             elif data == 'Client closed':
                 # clients.remove(client_socket)
                 for items in Serial_Ctrl_Center.serial_list:    # del all subscribe
-                    if client_socket in items.subscribe_client:
+                    if items =='':
+                        pass
+                    elif client_socket in items.subscribe_client:
                         items.subscribe_client.remove(client_socket)
                 client_socket.close()
                 print(f'Client {addr} disconnected')
                 break
             else:
                 for items in Serial_Ctrl_Center.serial_list:
-                    if client_socket in items.subscribe_client:
-                        items.conn.write((self.InputA + '\n').encode())
+                    if items =='':
+                        pass
+                    elif client_socket in items.subscribe_client:
+                        items.conn.write((data + '\n').encode())
 
     def start(self):
         # 等待并处理客户端连接

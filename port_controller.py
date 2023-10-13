@@ -56,7 +56,7 @@ class port_controller(object):
 
     def help(self):
         self.print_help('|---------------------------------------------------------|')
-        self.print_help('|----------------------#help -v2.1.1----------------------|')
+        self.print_help('|----------------------#help -v2.1.2----------------------|')
         self.print_help('|                                                         |')
         self.print_help('| input 0 ~ 9 to choose ttyUSB0~9                         |')
         self.print_help('| input quit to quit the program                          |')
