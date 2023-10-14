@@ -77,14 +77,14 @@ class serial_terminal(object):
                 self.log_tmp = self.conn.readline().decode().strip()
                 self.conn.flushOutput()
                 if self.log_tmp != '' and (self.log_tmp != (self.input_tmp) or self.echo):   # echo control
-                    if(self.log_tmp == '#'):
+                    '''if(self.log_tmp == '#'):
                         self.soc_commond = True
                     elif 'MCU:' in self.log_tmp:
                         self.soc_commond = False
                         self.mcu_project = self.log_tmp
-                    else:
-                        #print(self.log_tmp)
-                        Gw_Server.broadcast(self.log_tmp, self.subscribe_client)
+                    else:'''
+                    #print(self.log_tmp)
+                    Port_Server.broadcast(self.log_tmp, self.subscribe_client)
             except:
                 pass
 
@@ -167,14 +167,14 @@ class Serial_Ctrl_Center(object):
 
     def __init__(self):
         self.serial_monitor = Serial_Monitor()
-        self.serial_monitor_thread = threading.Thread(target=self.serial_monitor.start, daemon=False) # false will not end with main()
+        self.serial_monitor_thread = threading.Thread(target=self.serial_monitor.start, daemon=True) # false will not end with main()
         self.serial_monitor_thread.start()
 
     def keep(self):
         while True:
             pass
 
-class Gw_Server(object):
+class Port_Server(object):
     def __init__(self):
         # 定义服务器地址和端口
         HOST = 'localhost'
@@ -197,7 +197,9 @@ class Gw_Server(object):
         # 接收客户端的订阅请求
         while True:
             data = client_socket.recv(1024).decode()
-            if data in self.ttyUSBlist:
+            if data == '':
+                continue
+            elif data in self.ttyUSBlist:
                 Serial_Ctrl_Center.serial_list[int(data[-1])].subscribe_client.append(client_socket)
                 print(f'Client {addr} subscribed {data}')
             elif data[:11] == 'unsubscribe' and data[11:] in self.ttyUSBlist:
@@ -218,17 +220,22 @@ class Gw_Server(object):
                         pass
                     elif client_socket in items.subscribe_client:
                         items.conn.write((data + '\n').encode())
+                        print(f'send {data}')
 
     def start(self):
-        # 等待并处理客户端连接
-        while True:
-            client_socket, addr = self.server_socket.accept()
-            print(f'Client {addr} connected')
-            thread = threading.Thread(target=self.handle_client, args=(client_socket, addr))
-            thread.start()
+        try:
+            # 等待并处理客户端连接
+            while True:
+                client_socket, addr = self.server_socket.accept()
+                print(f'Client {addr} connected')
+                thread = threading.Thread(target=self.handle_client, args=(client_socket, addr), daemon=True)
+                thread.start()
+        except KeyboardInterrupt:
+            self.server_socket.close()
+            print('GW_Server closed!')
 
 
 if __name__ == '__main__':
     serial_ctrl_center = Serial_Ctrl_Center()
-    gw_server = Gw_Server()
-    gw_server.start()
+    port_server = Port_Server()
+    port_server.start()

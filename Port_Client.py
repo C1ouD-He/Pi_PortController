@@ -2,7 +2,7 @@ import socket
 import threading
 import time
 
-class Gw_Client(object):
+class Port_Client(object):
     def __init__(self):
         # 定义服务器地址和端口
         self.HOST = 'localhost'
@@ -16,7 +16,9 @@ class Gw_Client(object):
         while True:
             # 接收用户输入的命令
             command = input('Enter command (=n/!n/cc): ')
-            if command[0] == '=':
+            if command == '':
+                self.client_socket.send(chr(0x0D).encode())
+            elif command[0] == '=':
                 # 创建客户端套接字
                 self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.client_socket.connect((self.HOST, self.PORT))
@@ -26,7 +28,7 @@ class Gw_Client(object):
                 command = 'ttyUSB' + command[-1]
             # 处理服务器的响应
             elif command[0] == '!':
-                command = 'unsubscribettyUSBn' + command[-1]
+                command = 'unsubscribettyUSB' + command[-1]
             elif command == 'cc':
                 command = 'Client closed'
                 self.client_socket.send(command.encode())
@@ -42,5 +44,5 @@ class Gw_Client(object):
 
 
 if __name__ == '__main__':
-    gw_client = Gw_Client()
-    gw_client.run()
+    port_client = Port_Client()
+    port_client.run()
