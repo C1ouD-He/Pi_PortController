@@ -204,7 +204,7 @@ class Port_Server(object):
                 print(f'Client {addr} subscribed {data}')
             elif data[:11] == 'unsubscribe' and data[11:] in self.ttyUSBlist:
                 Serial_Ctrl_Center.serial_list[int(data[-1])].subscribe_client.remove(client_socket)
-                print(f'Client {addr} unsubscribed {data}')
+                print(f'Client {addr} unsubscribed {data[11:]}')
             elif data == 'Client closed':
                 for items in Serial_Ctrl_Center.serial_list:    # del all subscribe
                     if items =='':

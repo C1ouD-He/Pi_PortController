@@ -27,7 +27,8 @@ class serial_terminal(object):
             print(f'ERROR: ttyUSB{n} undetected!')
             self.status = False
 
-        self.histfile = '/home/pi/.remote_env/port/port2.0/.port_history'
+        self.histfile = '/home/pi/.remote_env/Pi_PortController/.port_history'
+        # self.histfile = '/home/pi/.remote_env/port/port2.0/.port_history'
         # os.chmod(self.histfile, 0o666)
         # 读取历史记录文件
         try:
