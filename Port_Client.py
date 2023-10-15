@@ -1,3 +1,4 @@
+import os
 import socket
 import threading
 import asyncio
@@ -12,13 +13,40 @@ class Port_Client(object):
         self.client_socket.connect((self.HOST, self.PORT))
         self.onOpened = True
 
+        self.mcu_project = ''
+        self.soc_commond = False
+        self.input_tmp = ''
+        self.echo = False
+
+    # 删除前一条历史记录的函数
+    def delete_previous_history(self):
+        index = self.readline.get_current_history_length() - 1
+        try:
+            self.readline.remove_history_item(index)
+        except ValueError:
+            pass
+    
+    def clear_terminal(self):
+        self.delete_previous_history()
+        self.readline.write_history_file(self.histfile)
+        self.readline.clear_history()
+        os.chmod(self.histfile, 0o666)
+        # del self.readline
+
     def receiver(self):
         self.client_socket.settimeout(0.1)
         print('INFO: Receiver open!')
         while self.onOpened:
             try:
                 response = self.client_socket.recv(1024).decode()
-                print(response)
+                if response != '' and (response != (self.input_tmp) or self.echo):   # echo control
+                    if(response == '#'):
+                        self.soc_commond = True
+                    elif 'MCU:' in response[:15]:
+                        self.soc_commond = False
+                        self.mcu_project = response
+                    else:
+                        print(response)
             except socket.timeout:
                 pass
         print('INFO: Receiver close!')
@@ -30,23 +58,56 @@ class Port_Client(object):
         self.onOpened = True
         self.thread_rcver = threading.Thread(target=self.receiver, daemon=True)
         self.thread_rcver.start()
+        self.client_socket.send(chr(0x0D).encode())
+        await asyncio.sleep(0.7)
+        
+        import readline
+        self.readline = readline
+
+        self.histfile = f'/home/pi/.remote_env/Pi_PortController/.port_history{n}'
+        try:
+            self.readline.read_history_file(self.histfile)
+        except FileNotFoundError:
+            # 如果历史记录文件不存在，则创建一个空文件
+            open(self.histfile, 'wb').close()
+        
+        self.readline.set_history_length(1000)
+
+        self.readline.clear_history()
+        self.readline.read_history_file(self.histfile)
+
         while True:
             try:
                 # 接收用户输入的命令
-                command = input('')
+                if(self.soc_commond == False):
+                    command = input(self.mcu_project)
+                else:
+                    command = input('# ')
                 if command == '':
                     self.client_socket.send(chr(0x0D).encode())
                     continue
-                elif command == 'q':
+                elif command == 'q' or command == 'Q':
                     command = 'unsubscribettyUSB' + n
                     self.onOpened = False
+                    self.echo = False
+                    self.clear_terminal()
                     print(f'INFO: Unsubscribe ttyUSB{n}!')
                     self.client_socket.send(command.encode())   # send the unsubscribe message
                     await asyncio.sleep(0.11)
                     return
+                elif(command == 'echo on'):
+                    if(self.echo == False):
+                        print('INFO: echo on!')
+                    self.echo = True
+                elif(command == 'echo off'):
+                    if(self.echo == True):
+                        print('INFO: echo off!')
+                    self.echo = False
                 else:
                     # 发送命令给服务器
                     self.client_socket.send(command.encode())
+                    self.input_tmp = command
+                    command = ''
             except KeyboardInterrupt:
                     self.client_socket.send(chr(0x03).encode())
             except BrokenPipeError:

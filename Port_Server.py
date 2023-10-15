@@ -1,7 +1,5 @@
-import sys
 import os
 import re
-import time
 import asyncio
 import threading
 import serial
@@ -11,8 +9,6 @@ import socket
 class serial_terminal(object):
     def __init__(self,n):
         self.n = n
-        import readline
-        self.readline = readline
         self.input_tmp = ''
         self.echo = False
         self.mcu_project = ''
@@ -29,37 +25,6 @@ class serial_terminal(object):
         except serial.serialutil.SerialException:
             print(f'ERROR: ttyUSB{self.n} undetected!')
             self.status = False
-
-        self.histfile = f'/home/pi/.remote_env/Pi_PortController/.port_history_ttyUSB{self.n}'
-        # self.histfile = '/home/pi/.remote_env/port/port2.0/.port_history'
-        # os.chmod(self.histfile, 0o666)
-        # 读取历史记录文件
-        try:
-            self.readline.read_history_file(self.histfile)
-        except FileNotFoundError:
-            # 如果历史记录文件不存在，则创建一个空文件
-            open(self.histfile, 'wb').close()
-        
-        self.readline.set_history_length(1000)
-
-
-    # 删除前一条历史记录的函数
-    def delete_previous_history(self):
-        index = self.readline.get_current_history_length() - 1
-        try:
-            self.readline.remove_history_item(index)
-        except ValueError:
-            pass
-
-    def clear_terminal(self):
-        self.delete_previous_history()
-        self.readline.write_history_file(self.histfile)
-        self.readline.clear_history()
-        os.chmod(self.histfile, 0o666)
-        # del self.readline
-
-    # self.readline.set_completer(completer)
-    # self.readline.parse_and_bind("tab: complete")
 
     def start_log_reading(self):
         try:
@@ -214,6 +179,13 @@ class Port_Server(object):
                 client_socket.close()
                 print(f'Client {addr} disconnected')
                 break
+            elif data == chr(0x0D):
+                for items in Serial_Ctrl_Center.serial_list:
+                    if items =='':
+                        pass
+                    elif client_socket in items.subscribe_client:
+                        items.conn.write(data.encode())
+                        print(f'send {data}')
             else:
                 for items in Serial_Ctrl_Center.serial_list:
                     if items =='':
