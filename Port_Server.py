@@ -11,6 +11,28 @@ def server_log(log):
     print(log)
     Port_Server.broadcast(log, log_listener)
 
+def get_local_ip():
+    """
+    获取本地 IP 地址
+    """
+    # 创建一个 UDP socket 对象
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    try:
+        # 连接到一个公共 IP 地址
+        sock.connect(('8.8.8.8', 80))
+
+        # 获取本地 IP 地址
+        local_ip = sock.getsockname()[0]
+    except Exception as e:
+        print(f"获取本地 IP 地址失败：{e}")
+        local_ip = None
+    finally:
+        # 关闭 socket 连接
+        sock.close()
+
+    return local_ip
+
 class serial_terminal(object):
     def __init__(self,n):
         self.n = n
@@ -147,7 +169,8 @@ class Serial_Ctrl_Center(object):
 class Port_Server(object):
     def __init__(self):
         # 定义服务器地址和端口
-        HOST = 'localhost'
+        # HOST = 'localhost'
+        HOST = get_local_ip()
         PORT = 8082
 
         self.ttyUSBlist = ['ttyUSB0', 'ttyUSB1', 'ttyUSB2', 'ttyUSB3', 'ttyUSB4', 'ttyUSB5', 'ttyUSB6', 'ttyUSB7', 'ttyUSB8', 'ttyUSB9']

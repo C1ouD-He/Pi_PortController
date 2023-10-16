@@ -4,10 +4,33 @@ import threading
 import asyncio
 import subprocess
 
+def get_local_ip():
+    """
+    获取本地 IP 地址
+    """
+    # 创建一个 UDP socket 对象
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    try:
+        # 连接到一个公共 IP 地址
+        sock.connect(('8.8.8.8', 80))
+
+        # 获取本地 IP 地址
+        local_ip = sock.getsockname()[0]
+    except Exception as e:
+        print(f"获取本地 IP 地址失败：{e}")
+        local_ip = None
+    finally:
+        # 关闭 socket 连接
+        sock.close()
+
+    return local_ip
+
 class Port_Client(object):
     def __init__(self):
         # 定义服务器地址和端口
-        self.HOST = 'localhost'
+        # self.HOST = 'localhost'
+        self.HOST = get_local_ip()
         self.PORT = 8082
         '''
             # 创建客户端套接字
