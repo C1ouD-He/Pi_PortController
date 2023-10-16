@@ -17,7 +17,6 @@ def get_local_ip():
     """
     # 创建一个 UDP socket 对象
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
     try:
         # 连接到一个公共 IP 地址
         sock.connect(('8.8.8.8', 80))
@@ -30,7 +29,6 @@ def get_local_ip():
     finally:
         # 关闭 socket 连接
         sock.close()
-
     return local_ip
 
 class serial_terminal(object):
@@ -41,8 +39,6 @@ class serial_terminal(object):
         self.mcu_project = ''
         self.soc_commond = False
         self.last_cmd = ''
-        # self.InputA = ''
-        # self.ser = []
         self.log_tmp = ''
         self.status = True
         self.subscribe_client = []
@@ -77,7 +73,7 @@ class serial_terminal(object):
                     else:'''
                     #server_log(self.log_tmp)
                     Port_Server.broadcast(self.log_tmp, self.subscribe_client)
-            except:
+            except Exception:
                 pass
 
 class Serial_Monitor:
@@ -108,15 +104,11 @@ class Serial_Monitor:
             else:
                 try:
                     re.match('ttyUSB', files).group()
-                    path = '/dev/' + files
-
-                    # self.conn_list.append(SerialICM(path))  # 创建连接对象，传参ttyUSBx字符串
-
+                    # 创建连接对象，传参ttyUSBx字符串
                     n = int(files[-1])
                     Serial_Ctrl_Center.serial_list[n] = serial_terminal(n)
                     Serial_Ctrl_Center.serial_name.append(files)
                     Serial_Ctrl_Center.onOpened[n] = True
-
                     connect_message = connect_message + files + ' '
                     add = add + 1
                 except serial.serialutil.SerialException:
@@ -184,15 +176,29 @@ class Port_Server(object):
     # 广播消息给所有订阅者
     def broadcast(message, clients):
         for client in clients:
-            client.send(message.encode())
+            try:
+                client.send(message.encode())
+            except BrokenPipeError:
+                client.close()
 
         # 处理客户端连接
     def handle_client(self, client_socket, addr):
+        # client_socket.settimeout(60)      # 30min no action will auto disconnect
         # 接收客户端的订阅请求
         while True:
-            data = client_socket.recv(1024).decode()
+            try:
+                data = client_socket.recv(1024).decode()
+            #except socket.timeout:
+            #    server_log(f'{e}')
+            #    self.onDisconnect(client_socket, addr)
+            #    break
+            except OSError:
+                # server_log(f'{e}')
+                self.onDisconnect(client_socket, addr)
+                break
             if data == '':
-                continue
+                self.onDisconnect(client_socket, addr)
+                break
             elif data in self.ttyUSBlist:
                 Serial_Ctrl_Center.serial_list[int(data[-1])].subscribe_client.append(client_socket)
                 server_log(f'Client {addr} subscribed {data}')
@@ -206,21 +212,15 @@ class Port_Server(object):
                 log_listener.remove(client_socket)
                 server_log(f'Client {addr} unsubscribed server log')
             elif data == 'Client closed':
-                for items in Serial_Ctrl_Center.serial_list:    # del all subscribe
-                    if items =='':
-                        pass
-                    elif client_socket in items.subscribe_client:
-                        items.subscribe_client.remove(client_socket)
-                client_socket.close()
-                server_log(f'Client {addr} disconnected')
+                self.onDisconnect(client_socket, addr)
                 break
-            elif data == chr(0x0D):
+            elif data == chr(0x0D) or data == chr(0x03):
                 for items in Serial_Ctrl_Center.serial_list:
                     if items =='':
                         pass
                     elif client_socket in items.subscribe_client:
                         items.conn.write(data.encode())
-                        server_log(f'Client {addr} send to ttyUSB{items.n}: {data}')
+                        server_log(f'Client {addr} send to ttyUSB{items.n}: {repr(data)}')
             else:
                 for items in Serial_Ctrl_Center.serial_list:
                     if items =='':
@@ -228,6 +228,15 @@ class Port_Server(object):
                     elif client_socket in items.subscribe_client:
                         items.conn.write((data + '\n').encode())
                         server_log(f'Client {addr} send to ttyUSB{items.n}: {data}')
+
+    def onDisconnect(self, client_socket, addr):
+        for items in Serial_Ctrl_Center.serial_list:    # del all subscribe
+            if items =='':
+                pass
+            elif client_socket in items.subscribe_client:
+                items.subscribe_client.remove(client_socket)
+        client_socket.close()
+        server_log(f'Client {addr} disconnected')
 
     def start(self):
         try:

@@ -10,7 +10,6 @@ def get_local_ip():
     """
     # 创建一个 UDP socket 对象
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
     try:
         # 连接到一个公共 IP 地址
         sock.connect(('8.8.8.8', 80))
@@ -23,7 +22,6 @@ def get_local_ip():
     finally:
         # 关闭 socket 连接
         sock.close()
-
     return local_ip
 
 class Port_Client(object):
@@ -91,9 +89,17 @@ class Port_Client(object):
         self.onOpened = True
         self.thread_rcver = threading.Thread(target=self.run_receiver, daemon=True)
         self.thread_rcver.start()
-        self.client_socket.send(chr(0x0D).encode())
-        await asyncio.sleep(0.7)
-        
+        try:
+            self.client_socket.send(chr(0x0D).encode())
+            await asyncio.sleep(0.7)
+        except BrokenPipeError:
+            await self.onConnectFail()
+        except ConnectionRefusedError:
+            await self.onConnectFail()
+        except OSError:
+            await self.onConnectFail()
+        if self.onOpened == False:
+            return
         import readline
         self.readline = readline
 
@@ -157,8 +163,9 @@ class Port_Client(object):
                 return
 
     def port_terminal(self):            # index select session
+        self.help()
         while True:
-            InputB = input('choose ( 0 ~ 9 | svrlog | ipport | chip | chport | quit | h)->')
+            InputB = input('choose ( 0 ~ 9 | svrlog | ipport | chip | chport | quit | -h)->')
             if(InputB == 'quit') or (InputB == 'QUIT'):
                 print('INFO: Port Client closed!')
                 exit()
@@ -184,7 +191,7 @@ class Port_Client(object):
                 self.onOpened = False
                 self.onConnected = False
                 self.client_socket.close()
-            elif InputB == 'h':
+            elif InputB == '-h':
                 self.help()
                 continue
             if self.onConnected == False:
@@ -207,7 +214,6 @@ class Port_Client(object):
                         continue
                 self.connName = InputB
                 asyncio.run(self.sender())
-
 
     def run_port_terminal(self):
         try:
@@ -244,7 +250,6 @@ class Port_Client(object):
         for i in range(5):
             print(f'INFO: Connecting{i+1}...')
             try:
-                # del self.client_socket, self.thread_rcver
                 self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.client_socket.settimeout(3)
                 self.client_socket.connect((self.HOST, self.PORT))
@@ -276,7 +281,7 @@ class Port_Client(object):
 
     def help(self):
         self.print_help('|---------------------------------------------------------|')
-        self.print_help('|----------------------#help -v2.1.7----------------------|')
+        self.print_help('|----------------------#HELP -v2.2.0----------------------|')
         self.print_help('|                                                         |')
         self.print_help('| input 0 ~ 9 to choose ttyUSB0~9                         |')
         self.print_help('| input svrlog to grep server log                         |')
