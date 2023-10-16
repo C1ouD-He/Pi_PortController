@@ -51,10 +51,9 @@ class Port_Client(object):
                 pass
         print('INFO: Receiver close!')
 
-    async def sender(self, n):
-        command = 'ttyUSB' + n                                              # send the subscribe message
-        self.client_socket.send(command.encode())
-        print(f'INFO: Subscribe ttyUSB{n}!')
+    async def sender(self, connName):                                            # send the subscribe message
+        self.client_socket.send(connName.encode())
+        print(f'INFO: Subscribe {connName}!')
         self.onOpened = True
         self.thread_rcver = threading.Thread(target=self.receiver, daemon=True)
         self.thread_rcver.start()
@@ -64,7 +63,7 @@ class Port_Client(object):
         import readline
         self.readline = readline
 
-        self.histfile = f'/home/pi/.remote_env/Pi_PortController/.port_history{n}'
+        self.histfile = f'/home/pi/.remote_env/Pi_PortController/.port_history_{connName}'
         try:
             self.readline.read_history_file(self.histfile)
         except FileNotFoundError:
@@ -87,11 +86,11 @@ class Port_Client(object):
                     self.client_socket.send(chr(0x0D).encode())
                     continue
                 elif command == 'q' or command == 'Q':
-                    command = 'unsubscribettyUSB' + n
+                    command = 'unsubscribe' + connName
                     self.onOpened = False
                     self.echo = False
                     self.clear_terminal()
-                    print(f'INFO: Unsubscribe ttyUSB{n}!')
+                    print(f'INFO: Unsubscribe {connName}!')
                     self.client_socket.send(command.encode())   # send the unsubscribe message
                     await asyncio.sleep(0.11)
                     return
@@ -111,11 +110,13 @@ class Port_Client(object):
             except KeyboardInterrupt:
                     self.client_socket.send(chr(0x03).encode())
             except BrokenPipeError:
-                self.onConnectFail()
+                await self.onConnectFail()
+            except OSError:
+                await self.onConnectFail()
 
     def port_terminal(self):            # index select session
         while True:
-            InputB = input('choose port( 0 ~ 9 | quit | h)->')
+            InputB = input('choose port( 0 ~ 9 | svrlog | quit | h)->')
             if(InputB == 'quit') or (InputB == 'QUIT'):
                 print('INFO: Port Client closed!')
                 exit()
@@ -124,34 +125,40 @@ class Port_Client(object):
             else:
                 if InputB == '':
                     continue
-                try:
-                    InputB = int(InputB)
-                except ValueError:
-                    print('WARNING: Input out of list!') 
-                for i in range(10):
-                    if InputB == i:
-                        asyncio.run(self.sender(str(InputB)))
-                        return
+                elif InputB == 'svrlog':
+                    pass
+                else:
+                    try:
+                        InputB = int(InputB)
+                        for i in range(10):
+                            if InputB == i:
+                                InputB = 'ttyUSB' + str(InputB)
+                                break
+                    except ValueError:
+                        print('WARNING: Input out of list!')
+                        continue
+                asyncio.run(self.sender(InputB))
+                
                 
         # asyncio.run(self.serial_terminal())
 
     def port_controller(self):
         try:
-            while 1:
-                self.port_terminal()
+            self.port_terminal()
         except KeyboardInterrupt:
             self.onOpened = False
             self.client_socket.close()
 
     def help(self):
         self.print_help('|---------------------------------------------------------|')
-        self.print_help('|----------------------#help -v2.1.4----------------------|')
+        self.print_help('|----------------------#help -v2.1.5----------------------|')
         self.print_help('|                                                         |')
         self.print_help('| input 0 ~ 9 to choose ttyUSB0~9                         |')
+        self.print_help('| input svrlog to grep server log                         |')
         self.print_help('| input quit to quit the program                          |')
         self.print_help('|                                                         |')
         self.print_help('| when using serial:                                      |')
-        self.print_help('| input q will return to choosing port                    |')
+        self.print_help('| input q will return to choosing conn port               |')
         self.print_help('| input echo on/off to enable/disable the echo            |')
         self.print_help('|                                                         |')
         self.print_help('|                                                         |')
@@ -160,11 +167,17 @@ class Port_Client(object):
     def print_help(self, txt):
         print('\033[;;100m' + txt + '\033[0m')
 
-    def onConnectFail(self):
+    async def onConnectFail(self):
         self.onOpened = False
         self.client_socket.close()
-        while True:
-            self.client_socket.connect((self.HOST, self.PORT))
+        for i in range (5):
+            print(f'Error: Connect failed! ReConnecting{i+1} ......')
+            try:
+                self.client_socket.connect((self.HOST, self.PORT))
+                self.onOpened = True
+                self.thread_rcver.start()
+            except OSError:
+                await asyncio.sleep(5)
 
     def run(self):
         self.port_controller()

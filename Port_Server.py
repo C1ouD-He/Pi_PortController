@@ -6,6 +6,11 @@ import serial
 import pyudev
 import socket
 
+log_listener = []
+def server_log(log):
+    print(log)
+    Port_Server.broadcast(log, log_listener)
+
 class serial_terminal(object):
     def __init__(self,n):
         self.n = n
@@ -23,7 +28,7 @@ class serial_terminal(object):
             self.conn = serial.Serial(f'/dev/ttyUSB{self.n}', baudrate=115200, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, timeout=0.5)
             self.start_log_reading()
         except serial.serialutil.SerialException:
-            print(f'ERROR: ttyUSB{self.n} undetected!')
+            server_log(f'ERROR: ttyUSB{self.n} undetected!')
             self.status = False
 
     def start_log_reading(self):
@@ -48,7 +53,7 @@ class serial_terminal(object):
                         self.soc_commond = False
                         self.mcu_project = self.log_tmp
                     else:'''
-                    #print(self.log_tmp)
+                    #server_log(self.log_tmp)
                     Port_Server.broadcast(self.log_tmp, self.subscribe_client)
             except:
                 pass
@@ -93,15 +98,15 @@ class Serial_Monitor:
                     connect_message = connect_message + files + ' '
                     add = add + 1
                 except serial.serialutil.SerialException:
-                    print(files + '设备异常，请重新连接')
+                    server_log(files + '设备异常，请重新连接')
                 except OSError:
-                    print(files + '打开错误，请重新连接')
+                    server_log(files + '打开错误，请重新连接')
                 except AttributeError:  # 非USB转串口设备
                     pass
         if add == 0:
             pass
         else:
-            print('connected: ' + connect_message + '\n')
+            server_log('connected: ' + connect_message + '\n')
 
     def serial_modify_remove(self):
         done = 1
@@ -114,7 +119,7 @@ class Serial_Monitor:
                         if files == items.conn.port.replace('/dev/', ''):
                             n = int(items.conn.port.replace('/dev/ttyUSB', ''))
                             items.conn.close()
-                            print(f'disconnected: ttyUSB{n}\n')
+                            server_log(f'disconnected: ttyUSB{n}\n')
                             Serial_Ctrl_Center.serial_name.remove(files)
                             items = ''
                             done = 0
@@ -152,6 +157,7 @@ class Port_Server(object):
         self.server_socket.bind((HOST, PORT))
         self.server_socket.listen(5)
 
+
     # 广播消息给所有订阅者
     def broadcast(message, clients):
         for client in clients:
@@ -166,10 +172,16 @@ class Port_Server(object):
                 continue
             elif data in self.ttyUSBlist:
                 Serial_Ctrl_Center.serial_list[int(data[-1])].subscribe_client.append(client_socket)
-                print(f'Client {addr} subscribed {data}')
+                server_log(f'Client {addr} subscribed {data}')
             elif data[:11] == 'unsubscribe' and data[11:] in self.ttyUSBlist:
                 Serial_Ctrl_Center.serial_list[int(data[-1])].subscribe_client.remove(client_socket)
-                print(f'Client {addr} unsubscribed {data[11:]}')
+                server_log(f'Client {addr} unsubscribed {data[11:]}')
+            elif data == 'svrlog':
+                log_listener.append(client_socket)
+                server_log(f'Client {addr} subscribed server log')
+            elif data == 'unsubscribesvrlog':
+                log_listener.remove(client_socket)
+                server_log(f'Client {addr} unsubscribed server log')
             elif data == 'Client closed':
                 for items in Serial_Ctrl_Center.serial_list:    # del all subscribe
                     if items =='':
@@ -177,7 +189,7 @@ class Port_Server(object):
                     elif client_socket in items.subscribe_client:
                         items.subscribe_client.remove(client_socket)
                 client_socket.close()
-                print(f'Client {addr} disconnected')
+                server_log(f'Client {addr} disconnected')
                 break
             elif data == chr(0x0D):
                 for items in Serial_Ctrl_Center.serial_list:
@@ -185,26 +197,26 @@ class Port_Server(object):
                         pass
                     elif client_socket in items.subscribe_client:
                         items.conn.write(data.encode())
-                        print(f'send {data}')
+                        server_log(f'Client {addr} send to ttyUSB{items.n}: {data}')
             else:
                 for items in Serial_Ctrl_Center.serial_list:
                     if items =='':
                         pass
                     elif client_socket in items.subscribe_client:
                         items.conn.write((data + '\n').encode())
-                        print(f'send {data}')
+                        server_log(f'Client {addr} send to ttyUSB{items.n}: {data}')
 
     def start(self):
         try:
             # 等待并处理客户端连接
             while True:
                 client_socket, addr = self.server_socket.accept()
-                print(f'Client {addr} connected')
+                server_log(f'Client {addr} connected')
                 thread = threading.Thread(target=self.handle_client, args=(client_socket, addr), daemon=True)
                 thread.start()
         except KeyboardInterrupt:
+            server_log('GW_Server closed!')
             self.server_socket.close()
-            print('GW_Server closed!')
 
 
 if __name__ == '__main__':
