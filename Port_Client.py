@@ -12,7 +12,7 @@ class Port_Client(object):
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.connect((self.HOST, self.PORT))
         self.onOpened = True
-
+        self.onConnected = True
         self.mcu_project = ''
         self.soc_commond = False
         self.input_tmp = ''
@@ -33,7 +33,7 @@ class Port_Client(object):
         os.chmod(self.histfile, 0o666)
         # del self.readline
 
-    def receiver(self):
+    async def receiver(self):
         self.client_socket.settimeout(0.1)
         print('INFO: Receiver open!')
         while self.onOpened:
@@ -49,13 +49,18 @@ class Port_Client(object):
                         print(response)
             except socket.timeout:
                 pass
+            except OSError:
+                await self.onConnectFail()
         print('INFO: Receiver close!')
 
-    async def sender(self, connName):                                            # send the subscribe message
-        self.client_socket.send(connName.encode())
-        print(f'INFO: Subscribe {connName}!')
+    def run_receiver(self):
+        asyncio.run(self.receiver())
+
+    async def sender(self):                                            # send the subscribe message
+        self.client_socket.send(self.connName.encode())
+        print(f'INFO: Subscribe {self.connName}!')
         self.onOpened = True
-        self.thread_rcver = threading.Thread(target=self.receiver, daemon=True)
+        self.thread_rcver = threading.Thread(target=self.run_receiver, daemon=True)
         self.thread_rcver.start()
         self.client_socket.send(chr(0x0D).encode())
         await asyncio.sleep(0.7)
@@ -63,7 +68,7 @@ class Port_Client(object):
         import readline
         self.readline = readline
 
-        self.histfile = f'/home/pi/.remote_env/Pi_PortController/.port_history_{connName}'
+        self.histfile = f'/home/pi/.remote_env/Pi_PortController/.port_history_{self.connName}'
         try:
             self.readline.read_history_file(self.histfile)
         except FileNotFoundError:
@@ -86,11 +91,11 @@ class Port_Client(object):
                     self.client_socket.send(chr(0x0D).encode())
                     continue
                 elif command == 'q' or command == 'Q':
-                    command = 'unsubscribe' + connName
+                    command = 'unsubscribe' + self.connName
                     self.onOpened = False
                     self.echo = False
                     self.clear_terminal()
-                    print(f'INFO: Unsubscribe {connName}!')
+                    print(f'INFO: Unsubscribe {self.connName}!')
                     self.client_socket.send(command.encode())   # send the unsubscribe message
                     await asyncio.sleep(0.11)
                     return
@@ -108,11 +113,16 @@ class Port_Client(object):
                     self.input_tmp = command
                     command = ''
             except KeyboardInterrupt:
+                if self.onOpened:
                     self.client_socket.send(chr(0x03).encode())
+                else:
+                    return
             except BrokenPipeError:
                 await self.onConnectFail()
             except OSError:
                 await self.onConnectFail()
+            if self.onOpened == False:
+                return
 
     def port_terminal(self):            # index select session
         while True:
@@ -122,7 +132,13 @@ class Port_Client(object):
                 exit()
             elif InputB == 'h':
                 self.help()
-            else:
+                continue
+            #if self.onOpened == False and '0' <= InputB <= '9':
+            #    print('Error: Port Server Disconnected!')
+            if self.onConnected == False:
+                if InputB != '':
+                    self.run_connecting()
+            if self.onConnected == True:
                 if InputB == '':
                     continue
                 elif InputB == 'svrlog':
@@ -137,7 +153,8 @@ class Port_Client(object):
                     except ValueError:
                         print('WARNING: Input out of list!')
                         continue
-                asyncio.run(self.sender(InputB))
+                self.connName = InputB
+                asyncio.run(self.sender())
                 
                 
         # asyncio.run(self.serial_terminal())
@@ -168,16 +185,43 @@ class Port_Client(object):
         print('\033[;;100m' + txt + '\033[0m')
 
     async def onConnectFail(self):
+        if self.onOpened == False:
+            return
         self.onOpened = False
+        self.onConnected = False
         self.client_socket.close()
         for i in range (5):
-            print(f'Error: Connect failed! ReConnecting{i+1} ......')
+            print(f'Error: Connect failed! ReConnecting{i+1} ...')
             try:
+                self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.client_socket.connect((self.HOST, self.PORT))
                 self.onOpened = True
+                self.onConnected = True
+                print('INFO: ReConnecting success!')
+                self.thread_rcver = threading.Thread(target=self.run_receiver, daemon=True)
                 self.thread_rcver.start()
+                self.client_socket.send(self.connName.encode())
+                break
             except OSError:
                 await asyncio.sleep(5)
+
+    async def connecting(self):
+        for i in range(5):
+            print(f'INFO: Connecting{i+1}...')
+            try:
+                # del self.client_socket, self.thread_rcver
+                self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.client_socket.connect((self.HOST, self.PORT))
+                self.onOpened = True
+                self.onConnected = True
+                print('INFO: Connecting success!')
+                break
+            except OSError:
+                await asyncio.sleep(5)
+
+
+    def run_connecting(self):
+        asyncio.run(self.connecting())
 
     def run(self):
         self.port_controller()
