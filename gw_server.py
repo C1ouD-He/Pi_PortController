@@ -199,12 +199,11 @@ class Gw_Server(object):
             data = client_socket.recv(1024).decode()
             if data in self.ttyUSBlist:
                 Serial_Ctrl_Center.serial_list[int(data[-1])].subscribe_client.append(client_socket)
-                print(f'Client {addr} subscribed')
+                print(f'Client {addr} subscribed {data}')
             elif data[:11] == 'unsubscribe' and data[11:] in self.ttyUSBlist:
                 Serial_Ctrl_Center.serial_list[int(data[-1])].subscribe_client.remove(client_socket)
-                print(f'Client {addr} unsubscribed')
+                print(f'Client {addr} unsubscribed {data}')
             elif data == 'Client closed':
-                # clients.remove(client_socket)
                 for items in Serial_Ctrl_Center.serial_list:    # del all subscribe
                     if items =='':
                         pass
