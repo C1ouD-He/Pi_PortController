@@ -142,10 +142,6 @@ class Serial_Ctrl_Center(object):
         self.serial_monitor_thread = threading.Thread(target=self.serial_monitor.start, daemon=True) # false will not end with main()
         self.serial_monitor_thread.start()
 
-    def keep(self):
-        while True:
-            pass
-
 class Port_Server(object):
     def __init__(self):
         # 定义服务器地址和端口
