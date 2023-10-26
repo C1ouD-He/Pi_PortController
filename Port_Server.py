@@ -35,11 +35,7 @@ class serial_terminal(object):
     def __init__(self,n):
         self.n = n
         self.input_tmp = ''
-        self.echo = False
-        self.mcu_project = ''
-        self.soc_commond = False
         self.last_cmd = ''
-        self.log_tmp = ''
         self.status = True
         self.subscribe_client = []
         try:
@@ -62,17 +58,9 @@ class serial_terminal(object):
     def log_reading(self):
         while Serial_Ctrl_Center.onOpened[self.n]:
             try:
-                self.log_tmp = self.conn.readline().decode().strip()
+                log_tmp = self.conn.read(1).decode()#.strip()
                 self.conn.flushOutput()
-                if self.log_tmp != '' and (self.log_tmp != (self.input_tmp) or self.echo):   # echo control
-                    '''if(self.log_tmp == '#'):
-                        self.soc_commond = True
-                    elif 'MCU:' in self.log_tmp:
-                        self.soc_commond = False
-                        self.mcu_project = self.log_tmp
-                    else:'''
-                    #server_log(self.log_tmp)
-                    Port_Server.broadcast(self.log_tmp, self.subscribe_client)
+                Port_Server.broadcast(log_tmp, self.subscribe_client)
             except Exception:
                 pass
 
@@ -183,15 +171,10 @@ class Port_Server(object):
 
         # 处理客户端连接
     def handle_client(self, client_socket, addr):
-        # client_socket.settimeout(60)      # 30min no action will auto disconnect
         # 接收客户端的订阅请求
         while True:
             try:
-                data = client_socket.recv(1024).decode()
-            #except socket.timeout:
-            #    server_log(f'{e}')
-            #    self.onDisconnect(client_socket, addr)
-            #    break
+                data = client_socket.recv(128).decode()
             except OSError:
                 # server_log(f'{e}')
                 self.onDisconnect(client_socket, addr)
@@ -214,20 +197,15 @@ class Port_Server(object):
             elif data == 'Client closed':
                 self.onDisconnect(client_socket, addr)
                 break
-            elif data == chr(0x0D) or data == chr(0x03):
-                for items in Serial_Ctrl_Center.serial_list:
-                    if items =='':
-                        pass
-                    elif client_socket in items.subscribe_client:
-                        items.conn.write(data.encode())
-                        server_log(f'Client {addr} send to ttyUSB{items.n}: {repr(data)}')
             else:
                 for items in Serial_Ctrl_Center.serial_list:
                     if items =='':
                         pass
                     elif client_socket in items.subscribe_client:
-                        items.conn.write((data + '\n').encode())
-                        server_log(f'Client {addr} send to ttyUSB{items.n}: {data}')
+                        items.conn.write(data.encode())   # + '\n').encode())
+                        if data != '\n':
+                            server_log(f'Client {addr} send to ttyUSB{items.n}: {data}')
+        del client_socket
 
     def onDisconnect(self, client_socket, addr):
         for items in Serial_Ctrl_Center.serial_list:    # del all subscribe

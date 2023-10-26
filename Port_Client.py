@@ -1,4 +1,5 @@
-import os
+import sys
+import readchar
 import socket
 import threading
 import asyncio
@@ -40,39 +41,24 @@ class Port_Client(object):
         self.mcu_project = ''
         self.soc_commond = False
         self.input_tmp = ''
-        self.echo = False
+        self.tab_state = False
+        self.tab_option = []
+        self.tab_tmp = ''
+        self.inputHead = ''
         self.run_connecting()
 
-    # 删除前一条历史记录的函数
-    def delete_previous_history(self):
-        index = self.readline.get_current_history_length() - 1
-        try:
-            self.readline.remove_history_item(index)
-        except ValueError:
-            pass
-    
-    def clear_terminal(self):
-        self.delete_previous_history()
-        self.readline.write_history_file(self.histfile)
-        self.readline.clear_history()
-        os.chmod(self.histfile, 0o666)
-        # del self.readline
 
     async def receiver(self):
-        self.client_socket.settimeout(0.1)
+        # self.client_socket.settimeout(0.05)
         print(f'INFO: Receiver[{self.connName}] open!')
         while self.onOpened:
             try:
                 response = self.client_socket.recv(1024).decode()
-                if response != '' and (response != (self.input_tmp) or self.echo):   # echo control
-                    if(response == '#'):
-                        self.soc_commond = True
-                    elif 'MCU:' in response[:15]:
-                        self.soc_commond = False
-                        self.mcu_project = response
-                    else:
-                        print(response)
+                sys.stdout.write(response)
+                #if response != '\n':
+                sys.stdout.flush()
             except socket.timeout:
+                self.tab_state = False     # tab finish
                 pass
             except ConnectionRefusedError:
                 await self.onConnectFail()
@@ -100,48 +86,23 @@ class Port_Client(object):
             await self.onConnectFail()
         if self.onOpened == False:
             return
-        import readline
-        self.readline = readline
-
-        self.histfile = f'/home/pi/.remote_env/Pi_PortController/.port_history_{self.connName}'
-        try:
-            self.readline.read_history_file(self.histfile)
-        except FileNotFoundError:
-            # 如果历史记录文件不存在，则创建一个空文件
-            open(self.histfile, 'wb').close()
-        
-        self.readline.set_history_length(1000)
-
-        self.readline.clear_history()
-        self.readline.read_history_file(self.histfile)
 
         while True:
             try:
-                # 接收用户输入的命令
-                if(self.soc_commond == False):
-                    command = input(self.mcu_project)
-                else:
-                    command = input('# ')
-                if command == '':
-                    self.client_socket.send(chr(0x0D).encode())
-                    continue
-                elif command == 'q' or command == 'Q':
+                command = readchar.readkey()
+                if self.tab_tmp != '':           # if tab,clear the content before tab
+                    command = command[len(self.tab_tmp):]
+                    self.tab_tmp = ''
+                #if command == '':
+                #    self.client_socket.send(chr(0x0D).encode())
+                #    break
+                elif command == chr(0x0F): # 'q' or command == 'Q':
                     command = 'unsubscribe' + self.connName
                     self.onOpened = False
-                    self.echo = False
-                    self.clear_terminal()
                     print(f'INFO: Unsubscribe[{self.connName}]!')
                     self.client_socket.send(command.encode())   # send the unsubscribe message
                     await asyncio.sleep(0.11)
                     return
-                elif(command == 'echo on'):
-                    if(self.echo == False):
-                        print('INFO: echo on!')
-                    self.echo = True
-                elif(command == 'echo off'):
-                    if(self.echo == True):
-                        print('INFO: echo off!')
-                    self.echo = False
                 else:
                     # 发送命令给服务器
                     self.client_socket.send(command.encode())
@@ -281,7 +242,7 @@ class Port_Client(object):
 
     def help(self):
         self.print_help('|---------------------------------------------------------|')
-        self.print_help('|----------------------#HELP -v2.2.0----------------------|')
+        self.print_help('|----------------------#HELP -v2.2.1----------------------|')
         self.print_help('|                                                         |')
         self.print_help('| input 0 ~ 9 to choose ttyUSB0~9                         |')
         self.print_help('| input svrlog to grep server log                         |')
@@ -291,8 +252,7 @@ class Port_Client(object):
         self.print_help('| input quit to quit the program                          |')
         self.print_help('|                                                         |')
         self.print_help('| when using serial:                                      |')
-        self.print_help('| input q will return to choosing conn port               |')
-        self.print_help('| input echo on/off to enable/disable the echo            |')
+        self.print_help('| input Ctrl+O will return to choosing conn port          |')
         self.print_help('|                                                         |')
         self.print_help('|                                                         |')
         self.print_help('|---------------------------------------------------------|')
