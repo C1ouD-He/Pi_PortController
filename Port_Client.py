@@ -83,9 +83,6 @@ class Port_Client(object):
                 if self.tab_tmp != '':           # if tab,clear the content before tab
                     command = command[len(self.tab_tmp):]
                     self.tab_tmp = ''
-                #if command == '':
-                #    self.client_socket.send(chr(0x0D).encode())
-                #    break
                 elif command == chr(0x0F): # 'q' or command == 'Q':
                     command = 'unsubscribe' + self.connName
                     self.onOpened = False

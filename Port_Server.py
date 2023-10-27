@@ -172,12 +172,15 @@ class Port_Server(object):
             if data == '':
                 self.onDisconnect(client_socket, addr)
                 break
-            elif data in self.ttyUSBlist:
+            elif data in Serial_Ctrl_Center.serial_namelist:
                 Serial_Ctrl_Center.serial_list[int(data[-1])].subscribe_client.append(client_socket)
                 server_log(f'Client {addr} subscribed {data}')
-            elif data[:11] == 'unsubscribe' and data[11:] in self.ttyUSBlist:
+            elif data[:11] == 'unsubscribe' and data[11:] in Serial_Ctrl_Center.serial_namelist:
                 Serial_Ctrl_Center.serial_list[int(data[-1])].subscribe_client.remove(client_socket)
                 server_log(f'Client {addr} unsubscribed {data[11:]}')
+            elif data in self.ttyUSBlist:
+                client_socket.send(f'FAILED: Subscribed failed because [{data}] is not available\n'.encode())
+                server_log(f'Client {addr} subscribed failed {data} because {data} is not available')
             elif data == 'svrlog':
                 log_listener.append(client_socket)
                 server_log(f'Client {addr} subscribed server log')
@@ -215,8 +218,9 @@ class Port_Server(object):
                 thread = threading.Thread(target=self.handle_client, args=(client_socket, addr), daemon=True)
                 thread.start()
         except KeyboardInterrupt:
-            server_log('GW_Server closed!')
             self.server_socket.close()
+            server_log('GW_Server closed!')
+
 
 
 if __name__ == '__main__':
