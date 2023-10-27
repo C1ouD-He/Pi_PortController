@@ -58,7 +58,7 @@ class serial_terminal(object):
     def log_reading(self):
         while Serial_Ctrl_Center.onOpened[self.n]:    # log监听线程
             try:
-                log_tmp = self.conn.read(24).decode()
+                log_tmp = self.conn.read(1).decode()
                 # self.conn.flushInput()
                 Port_Server.broadcast(log_tmp, self.subscribe_client)
             except Exception:
