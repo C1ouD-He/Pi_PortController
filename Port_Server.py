@@ -51,6 +51,10 @@ class serial_terminal(object):
         except serial.serialutil.SerialException:
             pass
         Serial_Ctrl_Center.onOpened[self.n] = True
+
+        Serial_Ctrl_Center.onOpened[self.n] = True
+        #asyncio.create_task(self.log_reading())
+
         tlog = threading.Thread(target=self.log_reading, daemon=True)  # 开启log监听线程
         tlog.start()
 
@@ -58,18 +62,17 @@ class serial_terminal(object):
     def log_reading(self):
         while Serial_Ctrl_Center.onOpened[self.n]:
             try:
-                log_tmp = self.conn.read(1).decode()#.strip()
-                self.conn.flushOutput()
+                log_tmp = self.conn.read(24).decode()
+                # self.conn.flushInput()
                 Port_Server.broadcast(log_tmp, self.subscribe_client)
             except Exception:
                 pass
 
 class Serial_Monitor:
-
     def __init__(self):
         self.serial_modify_add()
 
-    async def serial_modify(self):
+    async def serial_modify(self): 
         context = pyudev.Context()
         monitor = pyudev.Monitor.from_netlink(context)
         monitor.filter_by(subsystem='usb')
@@ -82,7 +85,7 @@ class Serial_Monitor:
 
     def start(self):
         asyncio.run(self.serial_modify())
-
+    
     def serial_modify_add(self):
         connect_message = ''
         add = 0
@@ -123,6 +126,7 @@ class Serial_Monitor:
                             items.conn.close()
                             server_log(f'disconnected: ttyUSB{n}\n')
                             Serial_Ctrl_Center.serial_name.remove(files)
+                            Serial_Ctrl_Center.onOpened[n] = False
                             items = ''
                             done = 0
                         if done:
@@ -138,6 +142,9 @@ class Serial_Ctrl_Center(object):
 
 
     def __init__(self):
+        #self.serial_monitor = Serial_Monitor()
+        #self.serial_monitor.set_callback(self.serial_monitor.callback)
+        #self.serial_monitor.start()
         self.serial_monitor = Serial_Monitor()
         self.serial_monitor_thread = threading.Thread(target=self.serial_monitor.start, daemon=True) # false will not end with main()
         self.serial_monitor_thread.start()

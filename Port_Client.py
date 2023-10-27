@@ -53,9 +53,8 @@ class Port_Client(object):
         print(f'INFO: Receiver[{self.connName}] open!')
         while self.onOpened:
             try:
-                response = self.client_socket.recv(1024).decode()
+                response = self.client_socket.recv(1).decode()
                 sys.stdout.write(response)
-                #if response != '\n':
                 sys.stdout.flush()
             except socket.timeout:
                 self.tab_state = False     # tab finish
@@ -242,7 +241,7 @@ class Port_Client(object):
 
     def help(self):
         self.print_help('|---------------------------------------------------------|')
-        self.print_help('|----------------------#HELP -v2.2.1----------------------|')
+        self.print_help('|----------------------#HELP -v2.3.0----------------------|')
         self.print_help('|                                                         |')
         self.print_help('| input 0 ~ 9 to choose ttyUSB0~9                         |')
         self.print_help('| input svrlog to grep server log                         |')
