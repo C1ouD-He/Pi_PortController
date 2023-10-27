@@ -86,9 +86,9 @@ class Port_Client(object):
                 elif command == chr(0x0F): # 'q' or command == 'Q':
                     command = 'unsubscribe' + self.connName
                     self.onOpened = False
-                    print(f'INFO: Unsubscribe[{self.connName}]!')
                     self.client_socket.send(command.encode())   # send the unsubscribe message
                     await asyncio.sleep(0.11)
+                    print(f'INFO: Unsubscribe[{self.connName}]!')
                     return
                 else:
                     # 发送命令给服务器
