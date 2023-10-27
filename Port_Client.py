@@ -14,7 +14,6 @@ def get_local_ip():
     try:
         # 连接到一个公共 IP 地址
         sock.connect(('8.8.8.8', 80))
-
         # 获取本地 IP 地址
         local_ip = sock.getsockname()[0]
     except Exception as e:
@@ -28,14 +27,8 @@ def get_local_ip():
 class Port_Client(object):
     def __init__(self):
         # 定义服务器地址和端口
-        # self.HOST = 'localhost'
         self.HOST = get_local_ip()
         self.PORT = 8082
-        '''
-            # 创建客户端套接字
-            self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.client_socket.connect((self.HOST, self.PORT))
-        '''
         self.onOpened = False
         self.onConnected = False
         self.mcu_project = ''
@@ -46,7 +39,6 @@ class Port_Client(object):
         self.tab_tmp = ''
         self.inputHead = ''
         self.run_connecting()
-
 
     async def receiver(self):
         # self.client_socket.settimeout(0.05)
@@ -85,7 +77,6 @@ class Port_Client(object):
             await self.onConnectFail()
         if self.onOpened == False:
             return
-
         while True:
             try:
                 command = readchar.readkey()

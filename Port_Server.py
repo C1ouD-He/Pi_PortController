@@ -31,6 +31,7 @@ def get_local_ip():
         sock.close()
     return local_ip
 
+
 class serial_terminal(object):
     def __init__(self,n):
         self.n = n
@@ -51,22 +52,18 @@ class serial_terminal(object):
         except serial.serialutil.SerialException:
             pass
         Serial_Ctrl_Center.onOpened[self.n] = True
-
-        Serial_Ctrl_Center.onOpened[self.n] = True
-        #asyncio.create_task(self.log_reading())
-
         tlog = threading.Thread(target=self.log_reading, daemon=True)  # 开启log监听线程
         tlog.start()
 
-    # log监听线程
     def log_reading(self):
-        while Serial_Ctrl_Center.onOpened[self.n]:
+        while Serial_Ctrl_Center.onOpened[self.n]:    # log监听线程
             try:
                 log_tmp = self.conn.read(24).decode()
                 # self.conn.flushInput()
                 Port_Server.broadcast(log_tmp, self.subscribe_client)
             except Exception:
                 pass
+
 
 class Serial_Monitor:
     def __init__(self):
@@ -90,7 +87,7 @@ class Serial_Monitor:
         connect_message = ''
         add = 0
         for files in os.listdir('/dev'):
-            if files in Serial_Ctrl_Center.serial_name:
+            if files in Serial_Ctrl_Center.serial_namelist:
                 pass
             else:
                 try:
@@ -98,7 +95,7 @@ class Serial_Monitor:
                     # 创建连接对象，传参ttyUSBx字符串
                     n = int(files[-1])
                     Serial_Ctrl_Center.serial_list[n] = serial_terminal(n)
-                    Serial_Ctrl_Center.serial_name.append(files)
+                    Serial_Ctrl_Center.serial_namelist.append(files)
                     Serial_Ctrl_Center.onOpened[n] = True
                     connect_message = connect_message + files + ' '
                     add = add + 1
@@ -115,7 +112,7 @@ class Serial_Monitor:
 
     def serial_modify_remove(self):
         done = 1
-        for files in Serial_Ctrl_Center.serial_name:
+        for files in Serial_Ctrl_Center.serial_namelist:
             if files in os.listdir('/dev'):  # 查看连接列表是否在/dev设备列表中
                 pass
             else:
@@ -125,7 +122,7 @@ class Serial_Monitor:
                             n = int(items.conn.port.replace('/dev/ttyUSB', ''))
                             items.conn.close()
                             server_log(f'disconnected: ttyUSB{n}\n')
-                            Serial_Ctrl_Center.serial_name.remove(files)
+                            Serial_Ctrl_Center.serial_namelist.remove(files)
                             Serial_Ctrl_Center.onOpened[n] = False
                             items = ''
                             done = 0
@@ -138,44 +135,34 @@ class Serial_Monitor:
 class Serial_Ctrl_Center(object):
     onOpened = [False, False, False, False, False, False, False, False, False, False]
     serial_list = ['', '', '', '', '', '', '', '', '', '']
-    serial_name = []
-
+    serial_namelist = []
 
     def __init__(self):
-        #self.serial_monitor = Serial_Monitor()
-        #self.serial_monitor.set_callback(self.serial_monitor.callback)
-        #self.serial_monitor.start()
         self.serial_monitor = Serial_Monitor()
         self.serial_monitor_thread = threading.Thread(target=self.serial_monitor.start, daemon=True) # false will not end with main()
         self.serial_monitor_thread.start()
 
+
 class Port_Server(object):
     def __init__(self):
         # 定义服务器地址和端口
-        # HOST = 'localhost'
         HOST = get_local_ip()
         PORT = 8082
-
         self.ttyUSBlist = ['ttyUSB0', 'ttyUSB1', 'ttyUSB2', 'ttyUSB3', 'ttyUSB4', 'ttyUSB5', 'ttyUSB6', 'ttyUSB7', 'ttyUSB8', 'ttyUSB9']
-
         # 创建服务器套接字
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((HOST, PORT))
         self.server_socket.listen(5)
 
-
-    # 广播消息给所有订阅者
-    def broadcast(message, clients):
+    def broadcast(message, clients):   # 广播消息给所有订阅者
         for client in clients:
             try:
                 client.send(message.encode())
             except BrokenPipeError:
                 client.close()
 
-        # 处理客户端连接
-    def handle_client(self, client_socket, addr):
-        # 接收客户端的订阅请求
-        while True:
+    def handle_client(self, client_socket, addr):    # 处理客户端连接
+        while True:        # 接收客户端的订阅请求
             try:
                 data = client_socket.recv(128).decode()
             except OSError:
