@@ -9,7 +9,7 @@ import socket
 log_listener = []
 def server_log(log):
     print(log)
-    Port_Server.broadcast(log, log_listener)
+    Port_Server.broadcast(log + '\n', log_listener)
 
 def get_local_ip():
     """
@@ -196,8 +196,8 @@ class Port_Server(object):
                         pass
                     elif client_socket in items.subscribe_client:
                         items.conn.write(data.encode())   # + '\n').encode())
-                        if data != '\n':
-                            server_log(f'Client {addr} send to ttyUSB{items.n}: {data}')
+                        #if data != '\n':
+                        #    server_log(f'Client {addr} send to ttyUSB{items.n}: {data}')
         del client_socket
 
     def onDisconnect(self, client_socket, addr):

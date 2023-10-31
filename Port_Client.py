@@ -31,17 +31,11 @@ class Port_Client(object):
         self.PORT = 8082
         self.onOpened = False
         self.onConnected = False
-        self.mcu_project = ''
-        self.soc_commond = False
         self.input_tmp = ''
-        self.tab_state = False
-        self.tab_option = []
-        self.tab_tmp = ''
-        self.inputHead = ''
         self.run_connecting()
 
     async def receiver(self):
-        # self.client_socket.settimeout(0.05)
+        self.client_socket.settimeout(0.1)
         print(f'INFO: Receiver[{self.connName}] open!')
         while self.onOpened:
             try:
@@ -49,7 +43,6 @@ class Port_Client(object):
                 sys.stdout.write(response)
                 sys.stdout.flush()
             except socket.timeout:
-                self.tab_state = False     # tab finish
                 pass
             except ConnectionRefusedError:
                 await self.onConnectFail()
@@ -80,15 +73,12 @@ class Port_Client(object):
         while True:
             try:
                 command = readchar.readkey()
-                if self.tab_tmp != '':           # if tab,clear the content before tab
-                    command = command[len(self.tab_tmp):]
-                    self.tab_tmp = ''
-                elif command == chr(0x0F): # 'q' or command == 'Q':
+                if command == chr(0x0F): # Ctrl+O:
                     command = 'unsubscribe' + self.connName
                     self.onOpened = False
                     self.client_socket.send(command.encode())   # send the unsubscribe message
-                    await asyncio.sleep(0.11)
                     print(f'INFO: Unsubscribe[{self.connName}]!')
+                    await asyncio.sleep(0.11)
                     return
                 else:
                     # 发送命令给服务器
