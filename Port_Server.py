@@ -122,7 +122,9 @@ class Serial_Monitor:
                             n = int(items.conn.port.replace('/dev/ttyUSB', ''))
                             items.conn.close()
                             server_log(f'disconnected: ttyUSB{n}\n')
+                            Port_Server.broadcast(f'INFO: ttyUSB{n} is not available, please press ctrl+O to return!\n', Serial_Ctrl_Center.serial_list[n].subscribe_client)
                             Serial_Ctrl_Center.serial_namelist.remove(files)
+                            Serial_Ctrl_Center.serial_list[n] = ''
                             Serial_Ctrl_Center.onOpened[n] = False
                             items = ''
                             done = 0
@@ -176,8 +178,9 @@ class Port_Server(object):
                 Serial_Ctrl_Center.serial_list[int(data[-1])].subscribe_client.append(client_socket)
                 server_log(f'Client {addr} subscribed {data}')
             elif data[:11] == 'unsubscribe' and data[11:] in Serial_Ctrl_Center.serial_namelist:
-                Serial_Ctrl_Center.serial_list[int(data[-1])].subscribe_client.remove(client_socket)
-                server_log(f'Client {addr} unsubscribed {data[11:]}')
+                if Serial_Ctrl_Center.onOpened[int(data[-1])] == True:
+                    Serial_Ctrl_Center.serial_list[int(data[-1])].subscribe_client.remove(client_socket)
+                    server_log(f'Client {addr} unsubscribed {data[11:]}')
             elif data in self.ttyUSBlist:
                 client_socket.send(f'FAILED: Subscribed failed because [{data}] is not available\n'.encode())
                 server_log(f'Client {addr} subscribed failed {data} because {data} is not available')
