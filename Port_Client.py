@@ -5,6 +5,7 @@ import threading
 import asyncio
 import subprocess
 
+
 def get_local_ip():
     """
     获取本地 IP 地址
@@ -24,10 +25,11 @@ def get_local_ip():
         sock.close()
     return local_ip
 
+
 class Port_Client(object):
     def __init__(self):
         # 定义服务器地址和端口
-        self.HOST = get_local_ip()
+        self.chip()
         self.PORT = 8082
         self.onOpened = False
         self.onConnected = False
@@ -53,7 +55,7 @@ class Port_Client(object):
     def run_receiver(self):
         asyncio.run(self.receiver())
 
-    async def sender(self):                                            # send the subscribe message
+    async def sender(self):  # send the subscribe message
         self.client_socket.send(self.connName.encode())
         print(f'INFO: Subscribe[{self.connName}]!')
         self.onOpened = True
@@ -73,10 +75,10 @@ class Port_Client(object):
         while True:
             try:
                 command = readchar.readkey()
-                if command == chr(0x0F): # Ctrl+O:
+                if command == chr(0x0F):  # Ctrl+O:
                     command = 'unsubscribe' + self.connName
                     self.onOpened = False
-                    self.client_socket.send(command.encode())   # send the unsubscribe message
+                    self.client_socket.send(command.encode())  # send the unsubscribe message
                     print(f'INFO: Unsubscribe[{self.connName}]!')
                     await asyncio.sleep(0.11)
                     return
@@ -97,22 +99,22 @@ class Port_Client(object):
             except OSError:
                 await self.onConnectFail()
 
-            if self.onOpened == False:
+            if not self.onOpened:
                 return
 
-    def port_terminal(self):            # index select session
+    def port_terminal(self):  # index select session
         self.help()
         while True:
             InputB = input('choose ( 0 ~ 9 | svrlog | ipport | chip | chport | quit | -h)->')
-            if(InputB == 'quit') or (InputB == 'QUIT'):
+            if (InputB == 'quit') or (InputB == 'QUIT'):
                 print('INFO: Port Client closed!')
                 exit()
             elif InputB == 'ipport':
                 print(f'INFO: IP setting: {self.HOST}:{self.PORT}')
-                continue  
+                continue
             elif InputB == 'chip':
                 print(f'INFO: IP is {self.HOST}')
-                self.HOST = input('Please enter IP:')
+                self.chip()
                 print('INFO: IP change success!')
                 print(f'INFO: IP setting: {self.HOST}:{self.PORT}')
                 self.onOpened = False
@@ -132,10 +134,10 @@ class Port_Client(object):
             elif InputB == '-h':
                 self.help()
                 continue
-            if self.onConnected == False:
+            if not self.onConnected:
                 if InputB != '':
                     self.run_connecting()
-            if self.onConnected == True:
+            if self.onConnected:
                 if InputB == '' or InputB == 'ipport' or InputB == 'chip' or InputB == 'chport':
                     continue
                 elif InputB == 'svrlog':
@@ -161,20 +163,21 @@ class Port_Client(object):
             self.client_socket.close()
 
     async def onConnectFail(self):
-        if self.onOpened == False:
+        if not self.onOpened:
             return
         self.onOpened = False
         self.onConnected = False
         self.client_socket.close()
-        for i in range (5):
-            print(f'Error: Connection failed! ReConnecting{i+1} ...')
+        for i in range(5):
+            print(f'Error: Connection failed! ReConnecting{i + 1} ...')
             try:
                 self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.client_socket.connect((self.HOST, self.PORT))
                 self.onOpened = True
                 self.onConnected = True
                 print('INFO: ReConnecting success!')
-                self.thread_rcver = threading.Thread(target=self.run_receiver, daemon=True)     # while reconnect success before back to index page,restart the receiver
+                self.thread_rcver = threading.Thread(target=self.run_receiver,
+                                                     daemon=True)  # while reconnect success before back to index page,restart the receiver
                 self.thread_rcver.start()
                 self.client_socket.send(self.connName.encode())
                 return
@@ -186,7 +189,7 @@ class Port_Client(object):
 
     async def connecting(self):
         for i in range(5):
-            print(f'INFO: Connecting{i+1}...')
+            print(f'INFO: Connecting{i + 1}...')
             try:
                 self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.client_socket.settimeout(3)
@@ -210,12 +213,19 @@ class Port_Client(object):
             print('\nINFO: Connection broken!')
         except TypeError:
             print('ERROR: IP setting error! Please check!')
-        
+
     def run(self):
         self.run_port_terminal()
 
     def print_help(self, txt):
         print('\033[;;100m' + txt + '\033[0m')
+
+    def chip(self):
+        ip = input('Server IP(Enter nothing to use local ip):')
+        if ip == '':
+            self.HOST = get_local_ip()
+        else:
+            self.HOST = ip
 
     def help(self):
         self.print_help('|---------------------------------------------------------|')
@@ -238,6 +248,7 @@ class Port_Client(object):
 def run_shell(alias_name):
     result = subprocess.run(alias_name, shell=True)
     print(result)
+
 
 if __name__ == '__main__':
     # 调用别名为 pwr 的命令
