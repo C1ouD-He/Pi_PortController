@@ -3,6 +3,7 @@ import readchar
 import socket
 import threading
 import asyncio
+# import colorama
 import subprocess
 
 
@@ -28,6 +29,11 @@ def get_local_ip():
 
 class Port_Client(object):
     def __init__(self):
+        self.thread_rcver = None
+        self.client_socket = None
+        self.connName = None
+        self.HOST = None
+        # colorama.init(convert=True)
         # 定义服务器地址和端口
         self.chip()
         self.PORT = 8082
@@ -70,7 +76,7 @@ class Port_Client(object):
             await self.onConnectFail()
         except OSError:
             await self.onConnectFail()
-        if self.onOpened == False:
+        if not self.onOpened:
             return
         while True:
             try:
@@ -105,14 +111,14 @@ class Port_Client(object):
     def port_terminal(self):  # index select session
         self.help()
         while True:
-            InputB = input('choose ( 0 ~ 9 | svrlog | ipport | chip | chport | quit | -h)->')
-            if (InputB == 'quit') or (InputB == 'QUIT'):
+            tx = input('>>')
+            if (tx == 'quit') or (tx == 'QUIT'):
                 print('INFO: Port Client closed!')
                 exit()
-            elif InputB == 'ipport':
+            elif tx == 'ipport':
                 print(f'INFO: IP setting: {self.HOST}:{self.PORT}')
                 continue
-            elif InputB == 'chip':
+            elif tx == 'chip':
                 print(f'INFO: IP is {self.HOST}')
                 self.chip()
                 print('INFO: IP change success!')
@@ -120,7 +126,7 @@ class Port_Client(object):
                 self.onOpened = False
                 self.onConnected = False
                 self.client_socket.close()
-            elif InputB == 'chport':
+            elif tx == 'chport':
                 print(f'INFO: PORT is {self.PORT}')
                 try:
                     self.PORT = int(input('Please enter PORT:'))
@@ -131,28 +137,28 @@ class Port_Client(object):
                 self.onOpened = False
                 self.onConnected = False
                 self.client_socket.close()
-            elif InputB == '-h':
+            elif tx == '-h':
                 self.help()
                 continue
             if not self.onConnected:
-                if InputB != '':
+                if tx != '':
                     self.run_connecting()
             if self.onConnected:
-                if InputB == '' or InputB == 'ipport' or InputB == 'chip' or InputB == 'chport':
+                if tx == '' or tx == 'ipport' or tx == 'chip' or tx == 'chport':
                     continue
-                elif InputB == 'svrlog':
+                elif tx == 'svrlog':
                     pass
                 else:
                     try:
-                        InputB = int(InputB)
+                        tx = int(tx)
                         for i in range(10):
-                            if InputB == i:
-                                InputB = 'ttyUSB' + str(InputB)
+                            if tx == i:
+                                tx = 'ttyUSB' + str(tx)
                                 break
                     except ValueError:
                         print('WARNING: Input out of list!')
                         continue
-                self.connName = InputB
+                self.connName = tx
                 asyncio.run(self.sender())
 
     def run_port_terminal(self):
@@ -169,7 +175,7 @@ class Port_Client(object):
         self.onConnected = False
         self.client_socket.close()
         for i in range(5):
-            print(f'Error: Connection failed! ReConnecting{i + 1} ...')
+            print(f'Error: Connection failed! ReConnecting {i + 1} ...')
             try:
                 self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.client_socket.connect((self.HOST, self.PORT))
@@ -189,7 +195,7 @@ class Port_Client(object):
 
     async def connecting(self):
         for i in range(5):
-            print(f'INFO: Connecting{i + 1}...')
+            print(f'INFO: Connecting {i + 1} ...')
             try:
                 self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.client_socket.settimeout(3)
@@ -217,8 +223,10 @@ class Port_Client(object):
     def run(self):
         self.run_port_terminal()
 
-    def print_help(self, txt):
-        print('\033[;;100m' + txt + '\033[0m')
+    @staticmethod
+    def print_help(txt):
+        print(txt)
+        # print(colorama.Back.LIGHTBLACK_EX + txt + colorama.Back.RESET)
 
     def chip(self):
         ip = input('Server IP(Enter nothing to use local ip):')
@@ -229,18 +237,18 @@ class Port_Client(object):
 
     def help(self):
         self.print_help('|---------------------------------------------------------|')
-        self.print_help('|----------------------#HELP -v2.3.0----------------------|')
+        self.print_help('|----------------------#HELP -v2.3.2----------------------|')
         self.print_help('|                                                         |')
-        self.print_help('| input 0 ~ 9 to choose ttyUSB0~9                         |')
-        self.print_help('| input svrlog to grep server log                         |')
-        self.print_help('| input ipport to show ip setting                         |')
-        self.print_help('| input chip to change ip                                 |')
-        self.print_help('| input chport to change port                             |')
-        self.print_help('| input quit to quit the program                          |')
+        self.print_help('| [0] ~ [9]      to choose ttyUSB0~9                      |')
+        self.print_help('| [svrlog]       to grep server log                       |')
+        self.print_help('| [ipport]       to show ip setting                       |')
+        self.print_help('| [chip]         to change ip                             |')
+        self.print_help('| [chport]       to change port                           |')
+        self.print_help('| [-h]           to help                                  |')
+        self.print_help('| [quit]         to quit the program                      |')
         self.print_help('|                                                         |')
         self.print_help('| when using serial:                                      |')
-        self.print_help('| input Ctrl+O will return to choosing conn port          |')
-        self.print_help('|                                                         |')
+        self.print_help('|      [Ctrl + O] will return to index line               |')
         self.print_help('|                                                         |')
         self.print_help('|---------------------------------------------------------|')
 
