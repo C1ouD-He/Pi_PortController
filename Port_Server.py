@@ -179,8 +179,10 @@ class Port_Server(object):
                 server_log(f'Client {addr} subscribed {data}')
             elif data[:11] == 'unsubscribe' and data[11:] in Serial_Ctrl_Center.serial_namelist:
                 if Serial_Ctrl_Center.onOpened[int(data[-1])] == True:
-                    Serial_Ctrl_Center.serial_list[int(data[-1])].subscribe_client.remove(client_socket)
-                    server_log(f'Client {addr} unsubscribed {data[11:]}')
+                    try:
+                        Serial_Ctrl_Center.serial_list[int(data[-1])].subscribe_client.remove(client_socket)
+                    except ValueError:
+                        server_log(f'Client {addr} unsubscribed {data[11:]}')
             elif data in self.ttyUSBlist:
                 client_socket.send(f'FAILED: Subscribed failed because [{data}] is not available\n'.encode())
                 server_log(f'Client {addr} subscribed failed {data} because {data} is not available')
